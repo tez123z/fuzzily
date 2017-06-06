@@ -45,9 +45,9 @@ module Fuzzily
         options[:where] ||= {} unless options.has_key? :where
 
         trigrams = _o.trigram_class_name.constantize.
+          where(options[:where]).
           limit(options[:limit]).
           offset(options[:offset]).
-          where(options[:where]).
           for_model(self.name).
           for_field(_o.field.to_s).
           matches_for(pattern)
