@@ -44,6 +44,11 @@ module Fuzzily
         options[:offset] ||= 0
         options[:where] ||= {} unless options.has_key? :where
 
+        unless options[:where].blank?
+          ids = self.name.constantize.where(options[:where]).pluck(:id)
+          options[:where] = ids.count > 0 ? {owner_id:ids} : {}
+        end
+
         trigrams = _o.trigram_class_name.constantize.
           where(options[:where]).
           limit(options[:limit]).
@@ -51,12 +56,26 @@ module Fuzzily
           for_model(self.name).
           for_field(_o.field.to_s).
           matches_for(pattern)
-        records = _load_for_ids(trigrams.map(&:owner_id))
+        records = _load_for_ids(trigrams.map(&:owner_id),options[:where])
         # order records as per trigram query (no portable way to do this in SQL)
-        trigrams.map { |t| records[t.owner_id] }
+
+        trigrams.map do |t|
+          
+          new_record = records[t.owner_id]
+          
+          new_record.class_eval do
+              attr_accessor :fuzzy_score
+          end
+
+          new_record.fuzzy_score = t.matches 
+          
+          new_record
+
+        end
+
       end
 
-      def _load_for_ids(ids)
+      def _load_for_ids(ids,params = {})
         {}.tap do |result|
           find(ids).each { |_r| result[_r.id] = _r }
         end
