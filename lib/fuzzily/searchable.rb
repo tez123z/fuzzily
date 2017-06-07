@@ -45,8 +45,15 @@ module Fuzzily
         options[:where] ||= {} unless options.has_key? :where
 
         unless options[:where].blank?
+          
           ids = self.name.constantize.where(options[:where]).pluck(:id)
-          options[:where] = ids.count > 0 ? {owner_id:ids} : {}
+          
+          if ids.count > 0
+            options[:where] = {owner_id:ids}
+          else
+            return []
+          end
+
         end
 
         trigrams = _o.trigram_class_name.constantize.
